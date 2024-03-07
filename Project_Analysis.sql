@@ -270,4 +270,106 @@ where
 	and (discount_price / actual_price) >= average_perc_discount
 order by
 	ratings DESC, actual_price ASC, discount_price DESC;
+
+-- Check items with most rating above 4.5
+select 
+  "name" ,
+  count(*) as number_distribution
+from 
+  development_products
+where 
+	lower(main_category) IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes')
+	and ratings notnull
+	and ratings >= 4.5
+group by 
+  "name"
+order by "name" desc;
+
+
+-- The smallest discount of each four sub categories 
+select 
+	name,
+	sub_category,
+	actual_price,
+	discount
+from (
+	  select 
+	  	name,
+	  	actual_price,
+	  	sub_category,
+	  	discount_price as discount
+      from 
+      	development_products
+      where 
+      	main_category IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes'));
+
+
+ -- Comparison price actual product with price previous product and next product in the same MAIN category
+ select 
+	name,
+	main_category,
+	actual_price,
+	lag(actual_price) over(partition by main_category order by id) as previous_product_price,
+	lead(actual_price) over(partition by main_category order by id) as next_product_price
+from 
+	development_products
+where
+	main_category IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes');
 	
+-- Comparison price actual product with price previous product and next product in the same SUB category
+select
+	name,
+	sub_category,
+	actual_price notnull,
+	lag(actual_price) over (partition by sub_category order by id) as previous_product_price,
+	lead(actual_price) over (partition by sub_category order by id) as next_product_price 
+from 
+	development_products
+where 
+	main_category IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes');
+	
+-- first quartile, mediana, third_quartile 
+select
+	main_category,
+	percentile_cont(0.25) WITHIN GROUP (ORDER BY ratings) AS first_quartile,
+	percentile_cont(0.5) WITHIN GROUP (ORDER BY ratings) AS median,
+	percentile_cont(0.75) WITHIN GROUP (ORDER BY ratings) AS third_quartile
+from 
+	development_products
+where 
+	main_category IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes')
+group by 
+	main_category;
+	
+-- Products where products sales is greater than 50000 and average is greater than 3.5 MAIN category
+select
+	distinct main_category,
+	sum(no_of_ratings) as products_sales,
+	round(cast(avg(ratings) as numeric), 2) as avg_ratings
+from
+	development_products 
+where
+	no_of_ratings > 50000 and main_category IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes')
+group by
+	main_category 
+having
+	avg(ratings) > 3.5
+order by
+	products_sales desc; 
+
+
+-- Products where products sales is greater than 50000 and average is greater than 3.5 SUB category
+select
+	distinct sub_category,
+	sum(no_of_ratings) as products_sales,
+	round(cast(avg(ratings) as numeric), 2) as avg_ratings
+from
+	development_products  
+where
+	no_of_ratings > 50000 and main_category IN ('accessories', 'men''s clothing', 'men''s shoes', 'women''s clothing', 'women''s shoes')
+group by
+	sub_category 
+having
+	avg(ratings) > 3.5
+order by
+	products_sales desc;
